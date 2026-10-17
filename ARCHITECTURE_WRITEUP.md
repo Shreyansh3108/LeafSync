@@ -1,4 +1,5 @@
-﻿# LeafSync — Architecture & Engineering Write-Up
+@'
+# LeafSync — Architecture & Engineering Write-Up
 
 **Author:** Shreyansh Dwivedi  
 **Project:** BookLeaf Publishing — Author Support & Operations Portal  
@@ -21,7 +22,7 @@ When designing LeafSync, I focused on four practical engineering goals:
 ## 2. System Architecture & End-to-End Flow
 
 ~~~mermaid
-flowchart LR
+flowchart TD
     subgraph Client["React + Vite + TanStack Query v5"]
         AuthorUI["Author Portal\n(/books, /tickets)"]
         AdminUI["Admin Workspace\n(/admin/queue, /admin/tickets/:id)"]
@@ -40,7 +41,7 @@ flowchart LR
         Guardrails["Priority Guardrails +\nKeyword Fallback + Circuit Breaker"]
     end
 
-    DB[("PostgreSQL\n(Neon Serverless)")]
+    DB[(PostgreSQL\nNeon Serverless)]
 
     AuthorUI <-->|"REST + Credentials"| AuthMW
     AdminUI <-->|"REST + Credentials"| AuthMW
@@ -71,9 +72,9 @@ flowchart LR
 
 ## 4. Key Trade-Offs I Made
 
-* **Modular Markdown Files vs. Vector Database (RAG):** BookLeaf's support policies map cleanly to 6 fixed operational categories. Loading `core.md` + one category `.md` file gives 100% policy recall with zero vector-search latency or embedding costs. Setting up pgvector/Pinecone for a 3-page policy document would have been unnecessary complexity.
-* **Server-Sent Events (SSE) vs. WebSockets:** Support portals need server-to-client push notifications (new replies, AI completion, status changes), while client-to-server actions (creating a ticket, changing status) are standard REST mutations that benefit from HTTP status codes and Zod validation. SSE over standard HTTP is lighter and more reliable behind cloud proxies than bidirectional WebSockets.
-* **In-Process Async Worker + 60s Sweeper vs. Redis/BullMQ:** To keep local setup simple (`npm run migrate && npm run seed && npm start` with only PostgreSQL required), AI jobs run asynchronously in-process with a 60-second PostgreSQL sweeper that retries any ticket stuck in `pending` state.
+- **Modular Markdown Files vs. Vector Database (RAG):** BookLeaf's support policies map cleanly to 6 fixed operational categories. Loading `core.md` + one category `.md` file gives 100% policy recall with zero vector-search latency or embedding costs. Setting up pgvector/Pinecone for a 3-page policy document would have been unnecessary complexity.
+- **Server-Sent Events (SSE) vs. WebSockets:** Support portals need server-to-client push notifications (new replies, AI completion, status changes), while client-to-server actions (creating a ticket, changing status) are standard REST mutations that benefit from HTTP status codes and Zod validation. SSE over standard HTTP is lighter and more reliable behind cloud proxies than bidirectional WebSockets.
+- **In-Process Async Worker + 60s Sweeper vs. Redis/BullMQ:** To keep local setup simple (`npm run migrate && npm run seed && npm start` with only PostgreSQL required), AI jobs run asynchronously in-process with a 60-second PostgreSQL sweeper that retries any ticket stuck in `pending` state.
 
 ---
 
@@ -85,3 +86,6 @@ If we rolled LeafSync out to BookLeaf's full 22,000-title catalog and operations
 2. **Redis Pub/Sub for Multi-Instance SSE:** Connect `sseHub.js` to Redis Pub/Sub so real-time events broadcast across multiple load-balanced Node.js containers.
 3. **Pre-Signed S3 / Cloudflare R2 Uploads:** Upgrade the attachment metadata flow to upload defective book photos directly to object storage with pre-signed URLs so the print team can inspect damaged copies inside the workspace.
 4. **AI Edit-Distance Feedback Loop:** Compare the initial `ai_draft` against the final message the admin actually sends (`ticket_messages.body`). Tracking which categories get heavily edited by humans would show us exactly which Knowledge Base `.md` file needs better policy wording.
+'@ | Set-Content -Path "..\ARCHITECTURE_WRITEUP.md" -Encoding UTF8
+
+Write-Host "Updated ARCHITECTURE_WRITEUP.md successfully!"
