@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node src/server.js",
-    "migrate": "node-pg-migrate",
+    "migrate": "node-pg-migrate up",
     "seed": "node src/db/seed/seed.js",
     "validate-seed": "node src/db/seed/validateSeed.js",
     "test": "node --test tests/leafsync.test.js",
