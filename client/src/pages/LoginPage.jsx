@@ -13,6 +13,7 @@ const DEMO_ACCOUNTS = [
 export default function LoginPage() {
   const [email, setEmail] = useState('priya.sharma@email.com');
   const [password, setPassword] = useState('Password123');
+  const [showDemoBox, setShowDemoBox] = useState(false);
   const login = useLogin();
   const navigate = useNavigate();
 
@@ -74,22 +75,54 @@ export default function LoginPage() {
 
         <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
 
-        <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '8px', fontWeight: 600 }}>
-          Quick-Switch Demo Accounts (Click to fill):
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {DEMO_ACCOUNTS.map((acc) => (
-            <button
-              key={acc.email}
-              type="button"
-              className="btn btn-outline"
-              style={{ justifyContent: 'space-between', fontSize: '0.8rem', padding: '6px 10px' }}
-              onClick={() => setEmail(acc.email)}
-            >
-              <span>{acc.label}</span>
-              <span style={{ color: '#64748b' }}>{acc.email}</span>
-            </button>
-          ))}
+        {/* Professional Collapsible Toggle for Evaluators */}
+        <div style={{ textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setShowDemoBox(!showDemoBox)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#475569',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '4px 8px',
+              textDecoration: 'underline'
+            }}
+          >
+            {showDemoBox ? 'Hide Quick-Switch Demo Accounts ▲' : '⚡ Quick-Switch Demo Accounts (For Evaluators) ▼'}
+          </button>
+
+          {showDemoBox && (
+            <div style={{ 
+              marginTop: '12px', 
+              padding: '12px', 
+              background: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: '8px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '6px',
+              textAlign: 'left'
+            }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Click an account to auto-fill:
+              </div>
+              {DEMO_ACCOUNTS.map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 10px', background: '#fff' }}
+                  onClick={() => setEmail(acc.email)}
+                >
+                  <span style={{ fontWeight: 500, color: '#1e293b' }}>{acc.label}</span>
+                  <span style={{ color: '#64748b', fontSize: '0.72rem' }}>{acc.email}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
