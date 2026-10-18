@@ -20,38 +20,33 @@ When designing LeafSync, I focused on four practical engineering goals:
 
 ## 2. System Architecture & End-to-End Flow
 
-~~~mermaid
-flowchart LR
-    subgraph Client["React + Vite + TanStack Query v5"]
-        AuthorUI["Author Portal\n(/books, /tickets)"]
-        AdminUI["Admin Workspace\n(/admin/queue, /admin/tickets/:id)"]
-    end
-
-    subgraph Server["Node.js + Express REST API (/api/v1)"]
-        AuthMW["JWT Cookie Auth + RBAC\n(requireAuth / requireRole)"]
-        Controllers["REST Controllers + Zod Validation"]
-        Orchestrator["Async AI Orchestrator\n+ 60s Retry Sweeper"]
-        SSEHub["SSE Real-Time Hub\n(/api/v1/events)"]
-    end
-
-    subgraph AILayer["Resilient AI Pipeline"]
-        Context["Zero-PII Context Builder\n+ Modular KB Loader"]
-        Gemini["Gemini Multi-Model Failover\n(2.5-flash-lite -> 2.5-flash)"]
-        Guardrails["Priority Guardrails +\nKeyword Fallback + Circuit Breaker"]
-    end
-
-    DB[("PostgreSQL\n(Neon Serverless)")]
-
-    AuthorUI <-->|"REST + Credentials"| AuthMW
-    AdminUI <-->|"REST + Credentials"| AuthMW
-    SSEHub -.->|"Live Push Events"| AuthorUI
-    SSEHub -.->|"Live Push Events"| AdminUI
-    AuthMW --> Controllers
-    Controllers <--> DB
-    Controllers --> Orchestrator
-    Orchestrator --> Context --> Gemini --> Guardrails
-    Guardrails --> DB
-    Guardrails -.-> SSEHub
+~~~text
++-------------------------------------------------------------------------+
+|                   REACT + VITE + TANSTACK QUERY v5                      |
+|  +---------------------------------+ +-------------------------------+  |
+|  | Author Portal (/books,/tickets) | | Admin Workspace (/admin/queue)|  |
+|  +---------------------------------+ +-------------------------------+  |
++-------------------+-----------------------------------+-----------------+
+                    | REST + httpOnly JWT Cookie        ^
+                    v                                   | Live Push (SSE)
++-------------------------------------------------------+-----------------+
+|                   NODE.JS + EXPRESS API (/api/v1)     |                 |
+|                                                       |                 |
+|  [ JWT Cookie Auth + RBAC ] ---> [ REST Controllers + Zod Validation ]  |
+|                                           |           |                 |
+|        +----------------------------------+           | SQL Queries     |
+|        v                                              v                 |
+|  [ Async AI Orchestrator + 60s Sweeper ]     +-----------------------+  |
+|        |                                     | PostgreSQL (Neon DB)  |  |
+|        v                                     | users, books, tickets |  |
+|  +----------------------------------------+  | messages, notes, logs |  |
+|  |         RESILIENT AI PIPELINE          |  +-----------------------+  |
+|  | 1. Zero-PII Context + Modular KB (.md) |           ^                 |
+|  | 2. Gemini Failover (2.5-lite -> flash) |           | Save Triage     |
+|  | 3. Priority Guardrails + 3-Strike CB   |-----------+                 |
+|  | 4. Keyword Classifier Fallback         |--->[ SSE Real-Time Hub ]----+
+|  +----------------------------------------+      (/api/v1/events)       |
++-------------------------------------------------------------------------+
 ~~~
 
 ---
@@ -71,9 +66,9 @@ flowchart LR
 
 ## 4. Key Trade-Offs I Made
 
-* **Modular Markdown Files vs. Vector Database (RAG):** BookLeaf's support policies map cleanly to 6 fixed operational categories. Loading `core.md` + one category `.md` file gives 100% policy recall with zero vector-search latency or embedding costs. Setting up pgvector/Pinecone for a 3-page policy document would have been unnecessary complexity.
-* **Server-Sent Events (SSE) vs. WebSockets:** Support portals need server-to-client push notifications (new replies, AI completion, status changes), while client-to-server actions (creating a ticket, changing status) are standard REST mutations that benefit from HTTP status codes and Zod validation. SSE over standard HTTP is lighter and more reliable behind cloud proxies than bidirectional WebSockets.
-* **In-Process Async Worker + 60s Sweeper vs. Redis/BullMQ:** To keep local setup simple (`npm run migrate && npm run seed && npm start` with only PostgreSQL required), AI jobs run asynchronously in-process with a 60-second PostgreSQL sweeper that retries any ticket stuck in `pending` state.
+- **Modular Markdown Files vs. Vector Database (RAG):** BookLeaf's support policies map cleanly to 6 fixed operational categories. Loading `core.md` + one category `.md` file gives 100% policy recall with zero vector-search latency or embedding costs. Setting up pgvector/Pinecone for a 3-page policy document would have been unnecessary complexity.
+- **Server-Sent Events (SSE) vs. WebSockets:** Support portals need server-to-client push notifications (new replies, AI completion, status changes), while client-to-server actions (creating a ticket, changing status) are standard REST mutations that benefit from HTTP status codes and Zod validation. SSE over standard HTTP is lighter and more reliable behind cloud proxies than bidirectional WebSockets.
+- **In-Process Async Worker + 60s Sweeper vs. Redis/BullMQ:** To keep local setup simple (`npm run migrate && npm run seed && npm start` with only PostgreSQL required), AI jobs run asynchronously in-process with a 60-second PostgreSQL sweeper that retries any ticket stuck in `pending` state.
 
 ---
 
