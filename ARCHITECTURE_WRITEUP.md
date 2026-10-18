@@ -1,12 +1,12 @@
 # LeafSync — System Architecture & Engineering Write-Up
 
-**Author:** Shreyansh Dwivedi  
-**Project:** BookLeaf Publishing — Author Support & Operations Portal  
-**Live Frontend (Vercel):** [https://leaf-sync.vercel.app/](https://leaf-sync.vercel.app/)
-**Live Backend API & Swagger Docs (Render):** [https://leafsync-backend.onrender.com/api/docs](https://leafsync-backend.onrender.com/api/docs)  
+- **Author:** Shreyansh Dwivedi
+- **Project:** BookLeaf Publishing — Author Support & Operations Portal
+- **Live Frontend (Vercel):** [https://leaf-sync.vercel.app/](https://leaf-sync.vercel.app/)
+- **Live Backend API & Swagger Docs (Render):** [https://leafsync-backend.onrender.com/api/docs](https://leafsync-backend.onrender.com/api/docs)
 
 ---
-s
+
 ## 1. Executive Summary & Engineering Philosophy
 
 BookLeaf Publishing manages over **1,200 new book launches per month** across a **22,000+ title catalog**. At this operational scale, author support queries are rarely generic FAQ questions—they are state-dependent inquiries tied to specific books, ISBN records, production stages, and quarterly royalty ledger calculations.
@@ -52,11 +52,12 @@ When architecting **LeafSync**, I designed the system around four foundational e
 ~~~
 
 ### End-to-End Ticket Lifecycle Trace
+
 1. **Ingestion (`T + 0ms`):** An author submits a ticket via `/tickets/new`. Zod validates the payload, PostgreSQL persists the ticket with `ai_status = 'pending'`, and the API responds with `201 Created` in under **40ms**.
 2. **Context Assembly (`T + 15ms`):** The background orchestrator fetches the linked book's production stage, sales ledger, and royalty metrics, strips all author PII (email, phone, street address), and computes deterministic domain flags (`belowMinimumThreshold`, `overdueRoyalty`).
 3. **Two-Stage AI Execution (`T + 300ms – 1.2s`):**
-   * **Stage 1 (Classification & Priority):** Calls Gemini with structured JSON output enforcement to determine the category (`Royalty & Payments`, `ISBN & Metadata Issues`, `Print Quality & Defective Copies`, `Publication Status & Timeline`, `Distribution & Availability`, or `General Inquiry`), priority level, and confidence score.
-   * **Stage 2 (Policy-Grounded Drafting):** Dynamically loads `core.md` + the single matched category `.md` file and generates an empathetic, policy-accurate draft response.
+   - **Stage 1 (Classification & Priority):** Calls Gemini with structured JSON output enforcement to determine the category (`Royalty & Payments`, `ISBN & Metadata Issues`, `Print Quality & Defective Copies`, `Publication Status & Timeline`, `Distribution & Availability`, or `General Inquiry`), priority level, and confidence score.
+   - **Stage 2 (Policy-Grounded Drafting):** Dynamically loads `core.md` + the single matched category `.md` file and generates an empathetic, policy-accurate draft response.
 4. **Deterministic Guardrail Verification:** `priorityGuardrails.js` inspects the output against hard business rules (e.g., forcing ISBN errors and defective print reports to at least `High`/`Critical`) before committing the triage metadata and audit log (`ticket_events`) to PostgreSQL.
 5. **Real-Time Broadcast:** `sseHub.js` emits `ticket.updated` and `ai.draft_ready` events over open SSE connections, updating the Admin Queue and Ticket Workspace instantaneously without page reloads.
 
@@ -66,11 +67,12 @@ When architecting **LeafSync**, I designed the system around four foundational e
 
 ### Modular Knowledge Base Injection (~60% Token Reduction)
 Sending an entire company knowledge base on every LLM call wastes context window capacity, increases time-to-first-token (TTFT), and inflates API costs. LeafSync partitions BookLeaf's policies into modular markdown documents inside `server/src/ai/kb/`:
-* **`core.md`:** Always loaded. Contains BookLeaf's brand voice, communication rules, and universal SLA commitments.
-* **Category Modules (`royalty.md`, `isbn.md`, `printing.md`, `production.md`, `distribution.md`, `general.md`):** Only the single module matching the ticket's classified category is injected into the drafting prompt. This reduces prompt token consumption by **~60%** while keeping category-specific rules (80/20 royalty split, ₹1,000 rollover threshold, 48-hour ISBN escalation SLA, Repro India free reprint criteria) sharply focused.
+- **`core.md`:** Always loaded. Contains BookLeaf's brand voice, communication rules, and universal SLA commitments.
+- **Category Modules (`royalty.md`, `isbn.md`, `printing.md`, `production.md`, `distribution.md`, `general.md`):** Only the single module matching the ticket's classified category is injected into the drafting prompt. This reduces prompt token consumption by **~60%** while keeping category-specific rules (80/20 royalty split, ₹1,000 rollover threshold, 48-hour ISBN escalation SLA, Repro India free reprint criteria) sharply focused.
 
 ### Three-Tier Fault Tolerance & Circuit Breaker
 External LLM APIs experience rate limits (`429`) and transient capacity spikes (`503`). LeafSync guarantees **100% operational continuity** through a three-layer defense:
+
 1. **Multi-Model Failover Chain:** If the primary model (`gemini-2.5-flash-lite`) fails or times out, the client transparently retries across fallback models (`gemini-2.5-flash` -> `gemini-flash-latest`).
 2. **State-Machine Circuit Breaker (`circuitBreaker.js`):** Tracks consecutive upstream failures. After **3 consecutive failures**, the circuit trips to `OPEN` for a cooldown window, bypassing network timeouts entirely so background workers never hang.
 3. **Deterministic Keyword Classifier + Canned KB Templates:** When the circuit is open or no API key is configured, `keywordClassifier.js` scores the ticket using weighted domain regular expressions (achieving **6/6 accuracy** on canonical evaluation test cases) and populates a structured Knowledge Base template so admins can still respond in one click.
@@ -81,15 +83,15 @@ External LLM APIs experience rate limits (`429`) and transient capacity spikes (
 
 ### Relational Schema & Auditability
 The PostgreSQL database is managed via versioned migrations (`node-pg-migrate`) across six normalized tables:
-* **`users` & `books`:** Stores author profiles, publication metadata, active production stages (`Cover Design`, `Typesetting`, `Published`), and financial ledgers (`royalty_earned`, `royalty_paid`, `royalty_pending`).
-* **`tickets`:** Central state table tracking lifecycle status (`Open` -> `In Progress` -> `Resolved` -> `Closed`), AI triage output, confidence scores, token telemetry, and SLA timestamps.
-* **`ticket_messages` vs. `ticket_internal_notes`:** Physically separates public author-admin threads from private internal operations notes.
-* **`ticket_events`:** Immutable append-only audit log recording every AI classification, human override, assignment change, and status transition with actor attribution.
+- **`users` & `books`:** Stores author profiles, publication metadata, active production stages (`Cover Design`, `Typesetting`, `Published`), and financial ledgers (`royalty_earned`, `royalty_paid`, `royalty_pending`).
+- **`tickets`:** Central state table tracking lifecycle status (`Open` -> `In Progress` -> `Resolved` -> `Closed`), AI triage output, confidence scores, token telemetry, and SLA timestamps.
+- **`ticket_messages` vs. `ticket_internal_notes`:** Physically separates public author-admin threads from private internal operations notes.
+- **`ticket_events`:** Immutable append-only audit log recording every AI classification, human override, assignment change, and status transition with actor attribution.
 
 ### Defense-in-Depth Security
-* **Authentication & RBAC:** Stateless JWT sessions stored in `httpOnly`, `SameSite` cookies to prevent XSS token theft, paired with role-based middleware (`requireAuth`, `requireRole('admin')`).
-* **Row-Level Ownership Enforcement:** Every author query enforces `WHERE author_id = $1` at the SQL layer, preventing Insecure Direct Object Reference (IDOR) attacks across books and tickets.
-* **Zero-PII LLM Sanitization:** Personal identifiers are stripped prior to external API calls, ensuring author contact details never leave BookLeaf's infrastructure.
+- **Authentication & RBAC:** Stateless JWT sessions stored in `httpOnly`, `SameSite` cookies to prevent XSS token theft, paired with role-based middleware (`requireAuth`, `requireRole('admin')`).
+- **Row-Level Ownership Enforcement:** Every author query enforces `WHERE author_id = $1` at the SQL layer, preventing Insecure Direct Object Reference (IDOR) attacks across books and tickets.
+- **Zero-PII LLM Sanitization:** Personal identifiers are stripped prior to external API calls, ensuring author contact details never leave BookLeaf's infrastructure.
 
 ---
 
@@ -107,9 +109,9 @@ The PostgreSQL database is managed via versioned migrations (`node-pg-migrate`) 
 
 ## 6. Key Architectural Trade-Offs
 
-* **Modular Markdown Files vs. Vector Database (RAG):** BookLeaf's operational policies map cleanly to 6 deterministic support categories. Injecting `core.md` alongside the exact category `.md` file guarantees **100% policy recall** with zero embedding latency or vector infrastructure overhead. Introducing pgvector or Pinecone for a concise policy corpus would add operational complexity without improving draft quality.
-* **Server-Sent Events (SSE) vs. WebSockets:** Support operations require unidirectional server-to-client push notifications (new ticket arrivals, AI draft completion, status updates), while client-to-server actions are standard REST mutations that benefit from HTTP caching, status codes, and Zod schema validation. SSE over standard HTTP is lighter, stateless-friendly, and more reliable across cloud load balancers than bidirectional WebSockets.
-* **In-Process Async Worker + 60s Sweeper vs. Redis/BullMQ:** To keep local evaluator setup frictionless (`npm run migrate && npm run seed && npm start` requiring only PostgreSQL), background AI jobs run in-process via `setImmediate` backed by a **60-second PostgreSQL recovery sweeper** that automatically retries any ticket left in `pending` state across server restarts.
+- **Modular Markdown Files vs. Vector Database (RAG):** BookLeaf's operational policies map cleanly to 6 deterministic support categories. Injecting `core.md` alongside the exact category `.md` file guarantees **100% policy recall** with zero embedding latency or vector infrastructure overhead. Introducing pgvector or Pinecone for a concise policy corpus would add operational complexity without improving draft quality.
+- **Server-Sent Events (SSE) vs. WebSockets:** Support operations require unidirectional server-to-client push notifications (new ticket arrivals, AI draft completion, status updates), while client-to-server actions are standard REST mutations that benefit from HTTP caching, status codes, and Zod schema validation. SSE over standard HTTP is lighter, stateless-friendly, and more reliable across cloud load balancers than bidirectional WebSockets.
+- **In-Process Async Worker + 60s Sweeper vs. Redis/BullMQ:** To keep local evaluator setup frictionless (`npm run migrate && npm run seed && npm start` requiring only PostgreSQL), background AI jobs run in-process via `setImmediate` backed by a **60-second PostgreSQL recovery sweeper** that automatically retries any ticket left in `pending` state across server restarts.
 
 ---
 
