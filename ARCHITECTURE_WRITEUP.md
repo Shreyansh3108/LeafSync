@@ -2,7 +2,7 @@
 
 **Author:** Shreyansh Dwivedi  
 **Project:** BookLeaf Publishing — Author Support & Operations Portal  
-**Live Frontend (Vercel):** [https://leaf-sync.vercel.app/login](https://leaf-sync.vercel.app/login)  
+**Live Frontend (Vercel):** [https://leaf-sync.vercel.app/](https://leaf-sync.vercel.app/)
 **Live Backend API & Swagger Docs (Render):** [https://leafsync-backend.onrender.com/api/docs](https://leafsync-backend.onrender.com/api/docs)  
 
 ---
