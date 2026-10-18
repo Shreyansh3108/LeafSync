@@ -6,7 +6,7 @@
 **Live Backend API & Swagger Docs (Render):** [https://leafsync-backend.onrender.com/api/docs](https://leafsync-backend.onrender.com/api/docs)  
 
 ---
-
+s
 ## 1. Executive Summary & Engineering Philosophy
 
 BookLeaf Publishing manages over **1,200 new book launches per month** across a **22,000+ title catalog**. At this operational scale, author support queries are rarely generic FAQ questions—they are state-dependent inquiries tied to specific books, ISBN records, production stages, and quarterly royalty ledger calculations.
