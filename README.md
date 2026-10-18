@@ -11,7 +11,7 @@ Instead of treating support tickets as generic chat messages, LeafSync connects 
 
 ## Live Deployment Links
 
-* **Live Frontend Application (React + Vite on Vercel):** [https://leaf-sync.vercel.app/login](https://leaf-sync.vercel.app/login)
+* **Live Frontend Application (React + Vite on Vercel):** [https://leaf-sync.vercel.app/](https://leaf-sync.vercel.app/)
 * **Live Backend API Base URL (Node.js + Express on Render):** [https://leafsync-backend.onrender.com](https://leafsync-backend.onrender.com)
 * **Interactive OpenAPI 3.0 / Swagger Docs:** [https://leafsync-backend.onrender.com/api/docs](https://leafsync-backend.onrender.com/api/docs)
 
